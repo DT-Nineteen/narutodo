@@ -5,9 +5,12 @@
 //  Created by Aiden on 28/5/25.
 //
 import SwiftUI
+@_exported import Inject
 
 struct MainView: View {
     @StateObject var viewModel = MainViewViewModel()
+    @ObserveInjection var inject
+
     
     @ViewBuilder
     var accountView: some View {
@@ -33,6 +36,7 @@ struct MainView: View {
                 LoginView()
             }
         }
+        .enableInjection()
     }
 }
 

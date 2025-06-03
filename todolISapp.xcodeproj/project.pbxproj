@@ -10,6 +10,7 @@
 		DF9D14792DE6F87B006AB582 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = DF9D14782DE6F87B006AB582 /* FirebaseAuth */; };
 		DF9D147B2DE6F87B006AB582 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = DF9D147A2DE6F87B006AB582 /* FirebaseCrashlytics */; };
 		DF9D147D2DE6F87B006AB582 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = DF9D147C2DE6F87B006AB582 /* FirebaseFirestore */; };
+		DF9D16132DEED82F006AB582 /* Inject in Frameworks */ = {isa = PBXBuildFile; productRef = DF9D16122DEED82F006AB582 /* Inject */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +62,7 @@
 				DF9D14792DE6F87B006AB582 /* FirebaseAuth in Frameworks */,
 				DF9D147B2DE6F87B006AB582 /* FirebaseCrashlytics in Frameworks */,
 				DF9D147D2DE6F87B006AB582 /* FirebaseFirestore in Frameworks */,
+				DF9D16132DEED82F006AB582 /* Inject in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +126,7 @@
 				DF9D14782DE6F87B006AB582 /* FirebaseAuth */,
 				DF9D147A2DE6F87B006AB582 /* FirebaseCrashlytics */,
 				DF9D147C2DE6F87B006AB582 /* FirebaseFirestore */,
+				DF9D16122DEED82F006AB582 /* Inject */,
 			);
 			productName = todolISapp;
 			productReference = DFCE774E2DE6B48300936501 /* todolISapp.app */;
@@ -209,6 +212,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				DFCE77A92DE6BB4B00936501 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				DF9D15D32DEECF8E006AB582 /* XCRemoteSwiftPackageReference "Inject" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DFCE774F2DE6B48300936501 /* Products */;
@@ -408,6 +412,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"todolISapp/Preview Content\"";
 				DEVELOPMENT_TEAM = 7UPQY3S54U;
+				EMIT_FRONTEND_COMMAND_LINES = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NarutoDo;
@@ -425,6 +430,10 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.5;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-Xlinker",
+					"-interposable",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.todolISapp.todolISapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -446,6 +455,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"todolISapp/Preview Content\"";
 				DEVELOPMENT_TEAM = 7UPQY3S54U;
+				EMIT_FRONTEND_COMMAND_LINES = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NarutoDo;
@@ -602,6 +612,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		DF9D15D32DEECF8E006AB582 /* XCRemoteSwiftPackageReference "Inject" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/krzysztofzablocki/Inject.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.2;
+			};
+		};
 		DFCE77A92DE6BB4B00936501 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -627,6 +645,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DFCE77A92DE6BB4B00936501 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		DF9D16122DEED82F006AB582 /* Inject */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DF9D15D32DEECF8E006AB582 /* XCRemoteSwiftPackageReference "Inject" */;
+			productName = Inject;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
