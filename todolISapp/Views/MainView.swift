@@ -20,6 +20,11 @@ struct MainView: View {
                     Label("Home", systemImage: "house")
                 }
             
+            RandomActivityView()
+                .tabItem {
+                    Label("Random", systemImage: "dice")
+                }
+            
             ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.circle")
