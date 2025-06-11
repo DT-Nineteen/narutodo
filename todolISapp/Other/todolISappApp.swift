@@ -1,20 +1,17 @@
-//
-//  todolISappApp.swift
-//  todolISapp
-//
-//  Created by Aiden on 28/5/25.
-//
-import Firebase
 import SwiftUI
 
 @main
 struct todolISappApp: App {
-    init(){
-        FirebaseApp.configure()
+  // Use @StateObject to create a single instance of AuthViewModel
+  // It will exist throughout the lifetime of the application.
+  @StateObject private var authViewModel = AuthService()
+
+  init() {
+  }
+
+  var body: some Scene {
+    WindowGroup {
+      MainView().environmentObject(authViewModel)
     }
-    var body: some Scene {
-        WindowGroup {
-            MainView()
-        }
-    }
+  }
 }
