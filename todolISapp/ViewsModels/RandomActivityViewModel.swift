@@ -97,7 +97,9 @@ class RandomActivityViewModel: ObservableObject {
   // Dynamic Slot Rolling Methods
 
   /// Roll a specific category slot by category ID
-  func rollCategory(categoryId: UUID) {
+  func rollCategory(
+    categoryId: UUID, completion: @escaping (_ result: Activity, _ category: Category) -> Void
+  ) {
     guard let category = categories.first(where: { $0.id == categoryId }) else {
       print("Category not found for ID: \(categoryId)")
       return
@@ -111,21 +113,14 @@ class RandomActivityViewModel: ObservableObject {
     // Add rolling delay for casino effect
     DispatchQueue.main.asyncAfter(deadline: .now() + rollingDuration) {
       self.selectedResults[categoryId] = self.getRandomActivity(from: activities)
-      self.rollingStates[categoryId] = false
       self.checkAndSaveToHistory()
-      print("🎯 \(category.name) result: \(self.selectedResults[categoryId]?.name ?? "nil")")
-    }
-  }
-
-  /// Roll all category slots at once
-  func rollAllSlots() {
-    print("Rolling all slots...")
-
-    for (index, category) in categories.enumerated() {
-      // Stagger the rolling with small delays for better UX
-      DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.3) {
-        self.rollCategory(categoryId: category.id)
+      if let result = self.selectedResults[categoryId] {
+        completion(result, category)
+        print("🎯 \(category.name) result: \(result.name)")
+      } else {
+        print("🎯 No result found for category: \(category.name)")
       }
+      self.rollingStates[categoryId] = false
     }
   }
 

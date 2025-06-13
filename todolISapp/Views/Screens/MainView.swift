@@ -1,10 +1,4 @@
 @_exported import Inject
-//
-//  ContentView.swift
-//  todolISapp
-//
-//  Created by Aiden on 28/5/25.
-//
 import SwiftUI
 
 struct MainView: View {
@@ -15,7 +9,7 @@ struct MainView: View {
   @ViewBuilder
   var accountView: some View {
     TabView {
-      ToDoListView(viewModel: ToDoListViewViewModel(userId: "123"))
+      TodoListView()
         .tabItem {
           Label("Home", systemImage: "house")
         }

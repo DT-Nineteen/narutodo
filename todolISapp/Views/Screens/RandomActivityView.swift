@@ -4,6 +4,7 @@ struct RandomActivityView: View {
   @StateObject private var viewModel = RandomActivityViewModel()
   @State private var editingCategory: Category?
   @State private var showEditSheet = false
+  @EnvironmentObject private var todoViewModel: TodoViewModel
 
   var body: some View {
     NavigationView {
@@ -48,8 +49,6 @@ struct RandomActivityView: View {
 
           Spacer()
 
-          // Action Buttons
-          actionButtonsSection
         }
 
         // Error message
@@ -140,7 +139,16 @@ extension RandomActivityView {
             availableActivities: viewModel.getActivities(for: category.id),
             categoryColor: getCategoryColor(for: category, index: getCategoryIndex(category)),
             onRoll: {
-              viewModel.rollCategory(categoryId: category.id)
+              viewModel.rollCategory(categoryId: category.id) { activityResult, categoryResult in
+
+                // When rolling is done, this action will be performed
+                print("Adding to todo: \(categoryResult.name): \(activityResult.name)")
+                Task {
+                  await todoViewModel.addTodoFromActivity(
+                    activity: activityResult
+                  )
+                }
+              }
             },
             onEdit: {
               editingCategory = category
@@ -162,67 +170,6 @@ extension RandomActivityView {
   // Helper function to get category index for color
   private func getCategoryIndex(_ category: Category) -> Int {
     return viewModel.categories.firstIndex { $0.id == category.id } ?? 0
-  }
-
-  // Simplified action buttons
-  private var actionButtonsSection: some View {
-    VStack(spacing: 12) {
-
-      // Roll all button - more minimal design
-      Button(action: {
-        viewModel.rollAllSlots()
-      }) {
-        HStack(spacing: 8) {
-          Image(systemName: "shuffle")
-            .font(.body)
-
-          Text("Randomize All (\(viewModel.totalCategories))")
-            .font(.body)
-            .fontWeight(.medium)
-        }
-        .foregroundColor(.white)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(Color.accentColor)
-        .cornerRadius(8)
-      }
-      .disabled(
-        viewModel.isAnySlotRolling || !viewModel.isDataReady || viewModel.totalCategories == 0
-      )
-      .opacity(
-        viewModel.isAnySlotRolling || !viewModel.isDataReady || viewModel.totalCategories == 0
-          ? 0.6 : 1.0)
-
-      // Reset button
-      if viewModel.hasAnyResult {
-        Button(action: {
-          viewModel.resetAllSlots()
-        }) {
-          HStack(spacing: 6) {
-            Image(systemName: "arrow.clockwise")
-              .font(.caption)
-            Text("Reset All")
-              .font(.caption)
-          }
-          .foregroundColor(.secondary)
-        }
-      }
-
-      // Completion indicator
-      if viewModel.allSlotsComplete {
-        HStack(spacing: 8) {
-          Image(systemName: "checkmark.circle.fill")
-            .foregroundColor(.green)
-          Text(
-            "All activities selected (\(viewModel.completedSlotsCount)/\(viewModel.totalCategories))"
-          )
-          .font(.subheadline)
-          .foregroundColor(.green)
-        }
-        .padding(.vertical, 8)
-        .transition(.opacity)
-      }
-    }
   }
 
   // Minimal history button
