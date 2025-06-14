@@ -8,48 +8,75 @@ struct TodoListView: View {
 
   var body: some View {
     NavigationView {
-      VStack(spacing: 0) {
-        // Filter Section
-        FilterSection()
+      ZStack {
 
-        // Calendar Filter Info (when calendar filter is active)
-        if viewModel.selectedFilter == .calendar, let selectedDate = viewModel.selectedCalendarDate
-        {
-          CalendarFilterInfo(selectedDate: selectedDate)
-        }
+        // Full screen gradient background
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea(.all)
 
-        // Main Content
-        if viewModel.filteredTodos.isEmpty {
-          EmptyStateView(
-            filter: viewModel.selectedFilter, selectedDate: viewModel.selectedCalendarDate)
-        } else {
-          List {
-            ForEach(viewModel.filteredTodos) { todo in
-              TodoRowView(
-                todo: todo,
-                viewModel: viewModel,
-                onEdit: {
-                  editingTodo = todo
-                  showingEditSheet = true
+        VStack(spacing: 0) {
+          Text("Do! Or be done")
+            .font(.system(size: 32, weight: .bold))
+            .foregroundColor(.white)
+            .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 2)
+            .overlay(
+              Text("Do! Or be done")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(Color.blue.opacity(0.2))
+                .offset(x: 2, y: 2)
+            )
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+          // Filter Section
+          FilterSection()
+
+          // Calendar Filter Info (when calendar filter is active)
+          if viewModel.selectedFilter == .calendar,
+            let selectedDate = viewModel.selectedCalendarDate
+          {
+            CalendarFilterInfo(selectedDate: selectedDate)
+          }
+
+          // Main Content
+          if viewModel.filteredTodos.isEmpty {
+            EmptyStateView(
+              filter: viewModel.selectedFilter, selectedDate: viewModel.selectedCalendarDate)
+          } else {
+            List {
+              ForEach(viewModel.filteredTodos) { todo in
+                TodoRowView(
+                  todo: todo,
+                  viewModel: viewModel,
+                  onEdit: {
+                    editingTodo = todo
+                    showingEditSheet = true
+                  }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+              }
+              .onDelete { indexSet in
+                Task {
+                  await viewModel.deleteTodo(at: indexSet)
                 }
-              )
-            }
-            .onDelete { indexSet in
-              Task {
-                await viewModel.deleteTodo(at: indexSet)
               }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .listRowSpacing(-12)
+            .refreshable {
+              await viewModel.fetchTodos()
+            }
           }
-          .listStyle(.plain)
-          .refreshable {
-            await viewModel.fetchTodos()
-          }
-        }
 
-        // Add Todo Button
-        AddTodoButton(isAddingTodo: $isAddingTodo)
+          // Add Todo Button
+          AddTodoButton(isAddingTodo: $isAddingTodo)
+        }
       }
-      .navigationTitle("My Todos")
       .task {
         viewModel.isLoading = true
         await viewModel.fetchTodos()
@@ -82,31 +109,64 @@ struct TodoListView: View {
   }
 }
 
-// Calendar Filter Info Bar
+// Modern Calendar Filter Info Bar
 private struct CalendarFilterInfo: View {
   let selectedDate: Date
   @EnvironmentObject private var viewModel: TodoViewModel
 
   var body: some View {
-    HStack {
-      Image(systemName: "calendar.circle.fill")
-        .foregroundColor(.accentColor)
+    HStack(spacing: 12) {
+      // Calendar Icon
+      Image(systemName: "calendar")
+        .font(.system(size: 16, weight: .medium))
+        .foregroundColor(.blue)
+        .frame(width: 32, height: 32)
+        .background(Color.blue.opacity(0.2))
+        .cornerRadius(8)
 
-      Text("Filtering by: \(formatDate(selectedDate))")
-        .font(.subheadline)
-        .fontWeight(.medium)
+      // Filter Text
+      VStack(alignment: .leading, spacing: 2) {
+        Text("Filtering by date")
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(.white.opacity(0.7))
+
+        Text(formatDate(selectedDate))
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(.white)
+      }
 
       Spacer()
 
-      Button("Clear") {
+      // Clear Button
+      Button(action: {
         viewModel.clearCalendarFilter()
+      }) {
+        HStack(spacing: 4) {
+          Image(systemName: "xmark")
+            .font(.system(size: 12, weight: .bold))
+          Text("Clear")
+            .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.2))
+        .cornerRadius(12)
       }
-      .font(.caption)
-      .foregroundColor(.accentColor)
+      .buttonStyle(PlainButtonStyle())
     }
-    .padding(.horizontal)
-    .padding(.vertical, 8)
-    .background(Color.accentColor.opacity(0.1))
+    .padding(.horizontal, 20)
+    .padding(.vertical, 12)
+    .background(
+      RoundedRectangle(cornerRadius: 12)
+        .fill(Color.white.opacity(0.1))
+        .overlay(
+          RoundedRectangle(cornerRadius: 12)
+            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+    )
+    .padding(.horizontal, 16)
+    .padding(.vertical, 4)
   }
 
   private func formatDate(_ date: Date) -> String {
@@ -136,7 +196,7 @@ private struct FilterSection: View {
       .padding(.horizontal)
     }
     .padding(.vertical, 8)
-    .background(Color(.systemGroupedBackground))
+    .background(Color.clear)
   }
 
   // Get display title for filter (special handling for calendar)
@@ -190,7 +250,7 @@ private struct FilterSection: View {
   }
 }
 
-// Filter Chip Component
+// Modern Filter Chip Component
 private struct FilterChip: View {
   let title: String
   let isSelected: Bool
@@ -199,87 +259,202 @@ private struct FilterChip: View {
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 4) {
+      HStack(spacing: 6) {
         Text(title)
-          .font(.caption)
-          .fontWeight(.medium)
+          .font(.system(size: 14, weight: .semibold))
 
         if count > 0 {
-          Text("(\(count))")
-            .font(.caption2)
-            .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+          Text("\(count)")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundColor(isSelected ? .white : .blue)
+            .frame(minWidth: 20, minHeight: 20)
+            .background(
+              Circle()
+                .fill(isSelected ? Color.white.opacity(0.3) : Color.blue.opacity(0.2))
+            )
         }
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 6)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
       .background(
-        RoundedRectangle(cornerRadius: 16)
-          .fill(isSelected ? Color.accentColor : Color(.systemGray5))
+        RoundedRectangle(cornerRadius: 20)
+          .fill(
+            isSelected
+              ? LinearGradient(
+                gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+              )
+              : LinearGradient(
+                gradient: Gradient(colors: [Color.white.opacity(0.2), Color.white.opacity(0.1)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+              )
+          )
+          .overlay(
+            RoundedRectangle(cornerRadius: 20)
+              .stroke(
+                isSelected ? Color.blue.opacity(0.5) : Color.white.opacity(0.3),
+                lineWidth: 1
+              )
+          )
       )
-      .foregroundColor(isSelected ? .white : .primary)
+      .foregroundColor(isSelected ? .white : .white.opacity(0.9))
+      .scaleEffect(isSelected ? 1.05 : 1.0)
+      .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
+    .buttonStyle(PlainButtonStyle())
   }
 }
 
-// Subviews
+// Modern Todo Card Component
 private struct TodoRowView: View {
   let todo: Todo
   @ObservedObject var viewModel: TodoViewModel
   let onEdit: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      HStack {
-        // Checkbox
+    VStack(spacing: 0) {
+      HStack(spacing: 4) {
+        // Modern Checkbox
         Button(action: {
           Task {
             await viewModel.toggleTodoStatus(todo: todo)
           }
         }) {
-          Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
-            .foregroundColor(todo.isCompleted ? .green : .secondary)
-            .font(.title3)
+          ZStack {
+            Circle()
+              .fill(todo.isCompleted ? Color.green : Color.gray.opacity(0.1))
+              .frame(width: 24, height: 24)
+              .overlay(
+                Circle()
+                  .stroke(todo.isCompleted ? Color.green : Color.gray.opacity(0.4), lineWidth: 2)
+              )
+
+            if todo.isCompleted {
+              Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
+            }
+          }
+        }
+        .buttonStyle(PlainButtonStyle())
+
+        // Content Section
+        VStack(alignment: .leading, spacing: 8) {
+          // Todo Title
+          HStack {
+            Text(todo.title)
+              .font(.system(size: 15))
+              .strikethrough(todo.isCompleted)
+              .foregroundColor(todo.isCompleted ? .secondary : .primary)
+              .lineLimit(2)
+
+            Spacer()
+
+            // Activity Badge
+            if todo.activityId != nil {
+              HStack(spacing: 4) {
+                Image(systemName: "dice.fill")
+                  .font(.system(size: 9))
+                Text("Activity")
+                  .font(.system(size: 9, weight: .medium))
+              }
+              .foregroundColor(.white)
+              .padding(.horizontal, 6)
+              .padding(.vertical, 2)
+              .background(Color.blue)
+              .cornerRadius(10)
+            }
+          }
+
+          // Due Date Info with modern styling
+          if let dueDate = todo.dueDate {
+            HStack(spacing: 6) {
+              Image(systemName: "calendar")
+                .font(.system(size: 11))
+                .foregroundColor(getDueDateColor(dueDate))
+
+              Text(formatDueDate(dueDate))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(getDueDateColor(dueDate))
+
+              Spacer()
+
+              // Priority indicator based on due date
+              if getDueDateColor(dueDate) == .red {
+                Text("OVERDUE")
+                  .font(.system(size: 9, weight: .bold))
+                  .foregroundColor(.white)
+                  .padding(.horizontal, 6)
+                  .padding(.vertical, 3)
+                  .background(Color.red)
+                  .cornerRadius(8)
+                  .shadow(color: Color.red.opacity(0.3), radius: 2, x: 0, y: 1)
+              } else if getDueDateColor(dueDate) == .orange {
+                Text("TODAY")
+                  .font(.system(size: 9, weight: .bold))
+                  .foregroundColor(.white)
+                  .padding(.horizontal, 6)
+                  .padding(.vertical, 3)
+                  .background(Color.orange)
+                  .cornerRadius(8)
+                  .shadow(color: Color.orange.opacity(0.3), radius: 2, x: 0, y: 1)
+              }
+            }
+          }
         }
 
-        // Todo Title
-        Text(todo.title)
-          .strikethrough(todo.isCompleted)
-          .foregroundColor(todo.isCompleted ? .secondary : .primary)
-          .font(.body)
-
-        Spacer()
-
-        // Activity Badge (if from activity)
-        if todo.activityId != nil {
-          Image(systemName: "dice.fill")
-            .foregroundColor(.blue)
-            .font(.caption)
-        }
+        .buttonStyle(PlainButtonStyle())
       }
-
-      // Due Date Info
-      if let dueDate = todo.dueDate {
-        HStack {
-          Image(systemName: "calendar")
-            .font(.caption2)
-            .foregroundColor(.secondary)
-
-          Text(formatDueDate(dueDate))
-            .font(.caption)
-            .foregroundColor(getDueDateColor(dueDate))
-        }
-        .padding(.leading, 32)  // Align with title
-      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
     }
+    .background(
+      RoundedRectangle(cornerRadius: 16)
+        .fill(
+          LinearGradient(
+            gradient: Gradient(colors: [
+              Color.white.opacity(todo.isCompleted ? 0.85 : 0.95),
+              Color.white.opacity(todo.isCompleted ? 0.75 : 0.90),
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 16)
+            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+    )
+    .padding(.horizontal, 0)
+    .padding(.vertical, 0)
     .contentShape(Rectangle())
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-      // Edit button
-      Button("Edit") {
+      // Modern Edit button
+      Button {
         onEdit()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "pencil")
+            .font(.system(size: 16, weight: .semibold))
+          Text("Edit")
+            .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+          LinearGradient(
+            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
       }
-      .tint(.blue)
+      .tint(.clear)
 
-      // Delete button
+      // Modern Delete button
       Button(role: .destructive) {
         if let index = viewModel.filteredTodos.firstIndex(where: { $0.id == todo.id }) {
           Task {
@@ -287,8 +462,23 @@ private struct TodoRowView: View {
           }
         }
       } label: {
-        Label("Delete", systemImage: "trash")
+        VStack(spacing: 4) {
+          Image(systemName: "trash")
+            .font(.system(size: 16, weight: .semibold))
+          Text("Delete")
+            .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+          LinearGradient(
+            gradient: Gradient(colors: [Color.red, Color.red.opacity(0.8)]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
       }
+      .tint(.clear)
     }
   }
 
@@ -332,19 +522,20 @@ private struct EmptyStateView: View {
     VStack(spacing: 16) {
       Image(systemName: getEmptyIcon())
         .font(.system(size: 50))
-        .foregroundColor(.secondary)
+        .foregroundColor(.white.opacity(0.7))
 
       Text(getEmptyTitle())
         .font(.title3)
         .fontWeight(.medium)
+        .foregroundColor(.white)
 
       Text(getEmptyMessage())
         .font(.subheadline)
-        .foregroundColor(.secondary)
+        .foregroundColor(.white.opacity(0.8))
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color(.systemGroupedBackground))
+    .background(Color.clear)
   }
 
   private func getEmptyIcon() -> String {
@@ -418,19 +609,37 @@ private struct AddTodoButton: View {
 
   var body: some View {
     Button(action: { isAddingTodo = true }) {
-      HStack {
-        Image(systemName: "plus.circle.fill")
+      HStack(spacing: 12) {
+        Image(systemName: "plus")
+          .font(.system(size: 18, weight: .bold))
+          .foregroundColor(.white)
+          .frame(width: 24, height: 24)
+          .background(Color.white.opacity(0.2))
+          .cornerRadius(6)
+
         Text("Add Todo")
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundColor(.white)
       }
-      .font(.headline)
-      .foregroundColor(.white)
       .frame(maxWidth: .infinity)
-      .padding(.vertical, 12)
-      .background(Color.accentColor)
-      .cornerRadius(10)
+      .padding(.vertical, 16)
+      .background(
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      )
+      .cornerRadius(16)
+      .overlay(
+        RoundedRectangle(cornerRadius: 16)
+          .stroke(Color.white.opacity(0.3), lineWidth: 1)
+      )
+      .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
-    .padding(.horizontal)
-    .padding(.vertical, 8)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .buttonStyle(PlainButtonStyle())
   }
 }
 

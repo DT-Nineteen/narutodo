@@ -8,76 +8,73 @@ struct RandomActivityView: View {
 
   var body: some View {
     NavigationView {
-      VStack(spacing: 16) {
-        // Header Section
-        headerSection
+      ZStack {
+        // Full screen gradient background
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea(.all)
 
-        if viewModel.isLoading {
-          // Loading state
-          VStack(spacing: 16) {
-            ProgressView()
-              .scaleEffect(1.2)
-            Text("Loading activities...")
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-          }
-          .frame(maxHeight: .infinity)
-        } else if !viewModel.isDataReady {
-          // No data state
-          VStack(spacing: 16) {
-            Image(systemName: "tray")
-              .font(.title)
-              .foregroundColor(.secondary)
-            Text("No categories found")
-              .font(.subheadline)
-              .foregroundColor(.secondary)
-            Text("Please add some categories first")
-              .font(.caption)
-              .foregroundColor(.secondary)
+        VStack(spacing: 16) {
+          // Header Section
+          headerSection
 
-            Button("Refresh") {
-              Task {
-                await viewModel.refreshData()
+          if viewModel.isLoading {
+            // Loading state
+            VStack(spacing: 16) {
+              ProgressView()
+                .scaleEffect(1.2)
+                .tint(.white)
+              Text("Loading activities...")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+            }
+            .frame(maxHeight: .infinity)
+          } else if !viewModel.isDataReady {
+            // No data state
+            VStack(spacing: 16) {
+              Image(systemName: "tray")
+                .font(.title)
+                .foregroundColor(.white.opacity(0.7))
+              Text("No categories found")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+              Text("Please add some categories first")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.6))
+
+                .buttonStyle(.borderedProminent)
+            }
+            .frame(maxHeight: .infinity)
+          } else {
+            // Dynamic Slot Machines
+            dynamicSlotMachinesSection
+
+            Spacer()
+
+            // Bottom buttons
+            VStack(spacing: 12) {
+
+              // Refresh Button
+              RefreshButton {
+                Task {
+                  await viewModel.refreshData()
+                }
               }
             }
-            .buttonStyle(.borderedProminent)
           }
-          .frame(maxHeight: .infinity)
-        } else {
-          // Dynamic Slot Machines
-          dynamicSlotMachinesSection
 
-          Spacer()
-
-        }
-
-        // Error message
-        if let errorMessage = viewModel.errorMessage {
-          Text("Error: \(errorMessage)")
-            .font(.caption)
-            .foregroundColor(.red)
-            .padding()
-        }
-
-      }
-      .padding(.horizontal, 20)
-      .navigationTitle("Random Activity")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .navigationBarTrailing) {
-          historyButton
-        }
-
-        ToolbarItem(placement: .navigationBarLeading) {
-          Button("Refresh") {
-            Task {
-              await viewModel.refreshData()
-            }
+          // Error message
+          if let errorMessage = viewModel.errorMessage {
+            Text("Error: \(errorMessage)")
+              .font(.caption)
+              .foregroundColor(.red.opacity(0.8))
+              .padding()
           }
         }
-      }
-      .sheet(isPresented: $viewModel.showHistory) {
-        historyView
+        .padding(.horizontal, 20)
       }
       .sheet(isPresented: $showEditSheet) {
         if let category = editingCategory {
@@ -103,24 +100,31 @@ struct RandomActivityView: View {
 
 // View Components
 extension RandomActivityView {
-
   // Simplified header
   private var headerSection: some View {
     VStack(spacing: 8) {
-      Text("Random Activity Generator")
-        .font(.title3)
-        .fontWeight(.medium)
-        .foregroundColor(.primary)
+      Text("Don't know what to do?")
+        .font(.system(size: 32, weight: .bold))
+        .foregroundColor(.white)
+        .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 2)
+        .overlay(
+          Text("Don't know what to do?")
+            .font(.system(size: 32, weight: .bold))
+            .foregroundColor(Color.blue.opacity(0.2))
+            .offset(x: 2, y: 2)
+        )
+        .padding(.top, 8)
+        .padding(.bottom, 16)
 
       if viewModel.isDataReady {
         if viewModel.totalCategories > 0 {
-          Text("Tap each category to randomize (\(viewModel.totalCategories) categories)")
+          Text("Tap to randomize (\(viewModel.totalCategories) categories)")
             .font(.subheadline)
-            .foregroundColor(.secondary)
+            .foregroundColor(.white.opacity(0.8))
         } else {
           Text("No categories available")
             .font(.subheadline)
-            .foregroundColor(.secondary)
+            .foregroundColor(.white.opacity(0.8))
         }
       }
     }
@@ -139,20 +143,25 @@ extension RandomActivityView {
             availableActivities: viewModel.getActivities(for: category.id),
             categoryColor: getCategoryColor(for: category, index: getCategoryIndex(category)),
             onRoll: {
-              viewModel.rollCategory(categoryId: category.id) { activityResult, categoryResult in
-
-                // When rolling is done, this action will be performed
-                print("Adding to todo: \(categoryResult.name): \(activityResult.name)")
-                Task {
-                  await todoViewModel.addTodoFromActivity(
-                    activity: activityResult
-                  )
+              // Only allow rolling if category has enough activities
+              if viewModel.hasEnoughActivities(for: category.id) {
+                viewModel.rollCategory(categoryId: category.id) { activityResult, categoryResult in
+                  // When rolling is done, this action will be performed
+                  print("Adding to todo: \(categoryResult.name): \(activityResult.name)")
+                  Task {
+                    await todoViewModel.addTodoFromActivity(activity: activityResult)
+                  }
                 }
               }
             },
             onEdit: {
               editingCategory = category
               showEditSheet = true
+            },
+            onDelete: {
+              Task {
+                await viewModel.deleteCategory(categoryId: category.id)
+              }
             }
           )
         }
@@ -171,56 +180,85 @@ extension RandomActivityView {
   private func getCategoryIndex(_ category: Category) -> Int {
     return viewModel.categories.firstIndex { $0.id == category.id } ?? 0
   }
+}
 
-  // Minimal history button
-  private var historyButton: some View {
-    Button(action: {
-      viewModel.toggleHistory()
-    }) {
-      Image(systemName: "clock")
-        .foregroundColor(.accentColor)
+// Add Category Button Component
+private struct AddCategoryButton: View {
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 12) {
+        Image(systemName: "plus")
+          .font(.system(size: 18, weight: .bold))
+          .foregroundColor(.white)
+          .frame(width: 24, height: 24)
+          .background(Color.white.opacity(0.2))
+          .cornerRadius(6)
+
+        Text("Add Category")
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundColor(.white)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 16)
+      .background(
+        LinearGradient(
+          gradient: Gradient(colors: [Color.green, Color.green.opacity(0.8)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      )
+      .cornerRadius(16)
+      .overlay(
+        RoundedRectangle(cornerRadius: 16)
+          .stroke(Color.white.opacity(0.3), lineWidth: 1)
+      )
+      .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .buttonStyle(PlainButtonStyle())
   }
+}
 
-  // History sheet view
-  private var historyView: some View {
-    NavigationView {
-      List {
-        if viewModel.hasHistory {
-          ForEach(Array(viewModel.activityHistory.enumerated()), id: \.offset) { index, activity in
-            DynamicHistoryRowView(activity: activity, index: index + 1)
-          }
-        } else {
-          VStack(spacing: 12) {
-            Image(systemName: "clock")
-              .font(.title2)
-              .foregroundColor(.secondary)
-            Text("No history yet")
-              .foregroundColor(.secondary)
-          }
-          .frame(maxWidth: .infinity)
-          .padding()
-        }
-      }
-      .navigationTitle("History")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .navigationBarLeading) {
-          Button("Close") {
-            viewModel.showHistory = false
-          }
-        }
+// Refresh Button Component
+private struct RefreshButton: View {
+  let action: () -> Void
 
-        if viewModel.hasHistory {
-          ToolbarItem(placement: .navigationBarTrailing) {
-            Button("Clear") {
-              viewModel.clearHistory()
-            }
-            .foregroundColor(.red)
-          }
-        }
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 12) {
+        Image(systemName: "arrow.clockwise")
+          .font(.system(size: 18, weight: .bold))
+          .foregroundColor(.white)
+          .frame(width: 24, height: 24)
+          .background(Color.white.opacity(0.2))
+          .cornerRadius(6)
+
+        Text("Refresh Activities")
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundColor(.white)
       }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 16)
+      .background(
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      )
+      .cornerRadius(16)
+      .overlay(
+        RoundedRectangle(cornerRadius: 16)
+          .stroke(Color.white.opacity(0.3), lineWidth: 1)
+      )
+      .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .buttonStyle(PlainButtonStyle())
   }
 }
 
@@ -233,6 +271,7 @@ struct DynamicCompactSlotView: View {
   let categoryColor: Color
   let onRoll: () -> Void
   let onEdit: () -> Void
+  let onDelete: () -> Void
 
   @State private var currentSpinIndex = 0
   @State private var spinTimer: Timer?
@@ -266,13 +305,12 @@ struct DynamicCompactSlotView: View {
     VStack(spacing: 0) {
       // Main slot machine button
       Button(action: {
-        if !isRolling && hasActivities {
+        if !isRolling && hasActivities && availableActivities.count >= 2 {
           onRoll()
         }
       }) {
         // Unified horizontal layout for all states
         HStack(spacing: 12) {
-
           // Left: Image/Emoji display (compact slot or result)
           if let result = result, !isRolling {
             // Completed state - show result image or icon
@@ -338,6 +376,11 @@ struct DynamicCompactSlotView: View {
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
+            } else if availableActivities.count < 2 {
+              Text("Need 2+ activities (\(availableActivities.count)/2)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.orange)
             } else {
               Text("Tap to randomize (\(availableActivities.count))")
                 .font(.subheadline)
@@ -395,12 +438,27 @@ struct DynamicCompactSlotView: View {
         )
       }
       .buttonStyle(PlainButtonStyle())
-      .disabled(!hasActivities)
+      .disabled(!hasActivities || availableActivities.count < 2)
+    }
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+      // Delete button
+      Button(role: .destructive) {
+        onDelete()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "trash")
+            .font(.system(size: 16, weight: .semibold))
+          Text("Delete")
+            .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(.white)
+      }
+      .tint(.red)
     }
     .onAppear {
       setupEmojis()
     }
-    .onChange(of: isRolling) { _, newValue in
+    .onChange(of: isRolling) { newValue in
       if newValue {
         startSpinning()
       } else {
@@ -445,66 +503,6 @@ struct DynamicCompactSlotView: View {
   private func stopSpinning() {
     spinTimer?.invalidate()
     spinTimer = nil
-  }
-}
-
-// Dynamic History Row
-struct DynamicHistoryRowView: View {
-  let activity: DatabaseRandomActivity
-  let index: Int
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack {
-        Text("#\(index)")
-          .font(.caption2)
-          .fontWeight(.medium)
-          .foregroundColor(.accentColor)
-
-        Spacer()
-
-        Text(formatDate(activity.generatedAt))
-          .font(.caption2)
-          .foregroundColor(.secondary)
-      }
-
-      // Dynamic tags based on actual results
-      LazyVGrid(
-        columns: [
-          GridItem(.flexible()),
-          GridItem(.flexible()),
-        ], spacing: 6
-      ) {
-        ForEach(activity.formattedResults, id: \.categoryName) { result in
-          ActivityTag(title: "\(result.categoryName): \(result.activityName)", color: .accentColor)
-        }
-      }
-    }
-    .padding(.vertical, 2)
-  }
-
-  private func formatDate(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .short
-    return formatter.string(from: date)
-  }
-}
-
-// Activity Tag Component (reused)
-struct ActivityTag: View {
-  let title: String
-  let color: Color
-
-  var body: some View {
-    Text(title)
-      .font(.caption2)
-      .padding(.horizontal, 6)
-      .padding(.vertical, 2)
-      .background(color.opacity(0.1))
-      .foregroundColor(color)
-      .cornerRadius(4)
-      .lineLimit(1)
   }
 }
 

@@ -6,16 +6,17 @@ struct ProfileView: View {
 
   var body: some View {
     NavigationView {
-      VStack(spacing: 0) {
-        // Header with gradient background
-        ZStack {
-          LinearGradient(
-            gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          )
-          .ignoresSafeArea(.all, edges: .top)
+      ZStack {
+        // Full screen gradient background
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea(.all)
 
+        VStack(spacing: 0) {
+          // Header section (without separate gradient background)
           VStack(spacing: 16) {
             Spacer().frame(height: 20)
 
@@ -55,51 +56,50 @@ struct ProfileView: View {
             Text(viewModel.userProfile?.fullName ?? "Loading...")
               .font(.title2)
               .fontWeight(.semibold)
-              .foregroundColor(.primary)
+              .foregroundColor(.white)
 
             Spacer().frame(height: 30)
           }
-        }
-        .frame(height: 250)
+          .frame(height: 250)
 
-        // Content area
-        VStack(spacing: 0) {
-          // Profile info section
-          VStack(spacing: 16) {
-            ProfileInfoRow(
-              title: "Email",
-              value: viewModel.userProfile?.email ?? "",
-              showEditIcon: false
-            )
-
-          }
-          .padding(.horizontal, 20)
-          .padding(.top, 30)
-
-          Spacer().frame(height: 40)
-
-          Spacer()
-
-          // Log out button
-          Button(action: {
-            Task {
-              await viewModel.logOut()
+          // Content area with semi-transparent background
+          VStack(spacing: 0) {
+            // Profile info section
+            VStack(spacing: 16) {
+              ProfileInfoRow(
+                title: "Email",
+                value: viewModel.userProfile?.email ?? "",
+                showEditIcon: false
+              )
             }
-          }) {
-            Text("Log out")
-              .font(.system(size: 16, weight: .medium))
-              .foregroundColor(.primary)
-              .frame(maxWidth: .infinity)
-              .frame(height: 50)
-              .background(Color.gray.opacity(0.1))
-              .cornerRadius(12)
+            .padding(.horizontal, 20)
+            .padding(.top, 30)
+
+            Spacer().frame(height: 40)
+
+            Spacer()
+
+            // Log out button
+            Button(action: {
+              Task {
+                await viewModel.logOut()
+              }
+            }) {
+              Text("Log out")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Color.white.opacity(0.2))
+                .cornerRadius(12)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 30)
           }
-          .padding(.horizontal, 20)
-          .padding(.bottom, 30)
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(25, corners: [.topLeft, .topRight])
         }
-        .background(Color(.systemBackground))
       }
-      .navigationTitle("Edit profile")
       .navigationBarTitleDisplayMode(.inline)
     }
     .onAppear {
@@ -123,24 +123,24 @@ struct ProfileInfoRow: View {
     VStack(alignment: .leading, spacing: 8) {
       Text(title)
         .font(.system(size: 14, weight: .medium))
-        .foregroundColor(.secondary)
+        .foregroundColor(.white.opacity(0.8))
 
       HStack {
         Text(value)
           .font(.system(size: 16))
-          .foregroundColor(.primary)
+          .foregroundColor(.white)
 
         Spacer()
 
         if showEditIcon {
           Image(systemName: "pencil")
             .font(.system(size: 14))
-            .foregroundColor(.secondary)
+            .foregroundColor(.white.opacity(0.6))
         }
       }
       .padding(.vertical, 12)
       .padding(.horizontal, 16)
-      .background(Color.gray.opacity(0.05))
+      .background(Color.white.opacity(0.1))
       .cornerRadius(12)
     }
   }
@@ -171,6 +171,27 @@ struct ManagementButton: View {
   }
 }
 
+// Extension for selective corner radius
+extension View {
+  func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+    clipShape(RoundedCorner(radius: radius, corners: corners))
+  }
+}
+
+struct RoundedCorner: Shape {
+  var radius: CGFloat = .infinity
+  var corners: UIRectCorner = .allCorners
+
+  func path(in rect: CGRect) -> Path {
+    let path = UIBezierPath(
+      roundedRect: rect,
+      byRoundingCorners: corners,
+      cornerRadii: CGSize(width: radius, height: radius)
+    )
+    return Path(path.cgPath)
+  }
+}
+
 // MARK: - Edit Profile Sheet
 struct EditProfileSheet: View {
   @ObservedObject var viewModel: ProfileViewViewModel
@@ -181,58 +202,68 @@ struct EditProfileSheet: View {
 
   var body: some View {
     NavigationView {
-      VStack(spacing: 24) {
-        // Avatar preview
-        VStack(spacing: 16) {
-          AsyncImage(
-            url: URL(
-              string: editedAvatarUrl.isEmpty
-                ? (viewModel.userProfile?.avatarUrl ?? "") : editedAvatarUrl)
-          ) { image in
-            image
-              .resizable()
-              .aspectRatio(contentMode: .fill)
-          } placeholder: {
-            Image(systemName: "person.circle.fill")
-              .font(.system(size: 60))
-              .foregroundColor(.gray.opacity(0.5))
-          }
-          .frame(width: 80, height: 80)
-          .clipShape(Circle())
-          .overlay(
-            Circle()
-              .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-          )
+      ZStack {
+        // Full screen gradient background for edit sheet too
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea(.all)
 
-          Text("Tap to change avatar")
-            .font(.caption)
-            .foregroundColor(.secondary)
+        VStack(spacing: 24) {
+          // Avatar preview
+          VStack(spacing: 16) {
+            AsyncImage(
+              url: URL(
+                string: editedAvatarUrl.isEmpty
+                  ? (viewModel.userProfile?.avatarUrl ?? "") : editedAvatarUrl)
+            ) { image in
+              image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+            } placeholder: {
+              Image(systemName: "person.circle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.white.opacity(0.5))
+            }
+            .frame(width: 80, height: 80)
+            .clipShape(Circle())
+            .overlay(
+              Circle()
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+            )
+
+            Text("Tap to change avatar")
+              .font(.caption)
+              .foregroundColor(.white.opacity(0.8))
+          }
+          .padding(.top)
+
+          // Form fields
+          VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+              Text("Full Name")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.8))
+
+              TextField("Enter your name", text: $editedName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+              Text("Avatar URL")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.8))
+
+              TextField("Enter avatar URL", text: $editedAvatarUrl)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+          }
+          .padding(.horizontal)
+
+          Spacer()
         }
-        .padding(.top)
-
-        // Form fields
-        VStack(spacing: 20) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Full Name")
-              .font(.system(size: 14, weight: .medium))
-              .foregroundColor(.secondary)
-
-            TextField("Enter your name", text: $editedName)
-              .textFieldStyle(RoundedBorderTextFieldStyle())
-          }
-
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Avatar URL")
-              .font(.system(size: 14, weight: .medium))
-              .foregroundColor(.secondary)
-
-            TextField("Enter avatar URL", text: $editedAvatarUrl)
-              .textFieldStyle(RoundedBorderTextFieldStyle())
-          }
-        }
-        .padding(.horizontal)
-
-        Spacer()
       }
       .navigationTitle("Edit Profile")
       .navigationBarTitleDisplayMode(.inline)
@@ -241,6 +272,7 @@ struct EditProfileSheet: View {
           Button("Cancel") {
             dismiss()
           }
+          .foregroundColor(.white)
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
@@ -250,6 +282,7 @@ struct EditProfileSheet: View {
             }
           }
           .disabled(viewModel.isLoading)
+          .foregroundColor(.white)
         }
       }
     }

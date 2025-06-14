@@ -92,7 +92,7 @@ class TodoViewModel: ObservableObject {
         .from("todos")
         .select()
         .eq("user_id", value: currentUserId)
-        .order("created_at", ascending: false)
+        .order("created_at", ascending: true)
         .execute()
         .value
       self.todos = fetchedTodos

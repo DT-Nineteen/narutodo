@@ -1,13 +1,5 @@
-// //
-// //  ToDoListItemView.swift
-// //  todolISapp
-// //
-// //  Created by Aiden on 28/5/25.
-// //
-
 import SwiftUI
 
-/// A single todo item row view for NaruTodo
 struct ToDoView: View {
   let todo: Todo
   let onToggle: (Todo) -> Void
@@ -51,17 +43,6 @@ struct ToDoView: View {
             .font(.caption)
         }
 
-        // Edit button if edit handler provided
-        if let editHandler = onEdit {
-          Button(action: {
-            print("[DEBUG] Edit button tapped for todo: \(todo.title)")
-            editHandler(todo)
-          }) {
-            Image(systemName: "pencil")
-              .foregroundColor(.blue)
-              .font(.caption)
-          }
-        }
       }
 
       // Due Date Info
@@ -75,12 +56,11 @@ struct ToDoView: View {
             .font(.caption)
             .foregroundColor(getDueDateColor(dueDate))
         }
-        .padding(.leading, 32)  // Align with title
+        .padding(.leading, 32)
       }
     }
-    .padding(.vertical, 8)
+    .padding(.vertical, 2)
     .contentShape(Rectangle())
-    // Debug tap log
     .onTapGesture {
       print("[DEBUG] Tapped todo: \(todo.title)")
     }
@@ -164,5 +144,4 @@ struct ToDoView: View {
       onEdit: { _ in }
     )
   }
-  .padding()
 }

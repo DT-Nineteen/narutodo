@@ -27,12 +27,7 @@ class RandomActivityViewModel: ObservableObject {
   @Published var isLoading: Bool = false
   @Published var errorMessage: String?
 
-  // History and UI states
-  @Published var showHistory: Bool = false
-  @Published var activityHistory: [DatabaseRandomActivity] = []
-
   // Private Properties
-  private let maxHistoryCount: Int = 10  // History limit
   private let rollingDuration: Double = 2.0  // Rolling animation duration
 
   // Initialization - Dattebayo!
@@ -113,7 +108,6 @@ class RandomActivityViewModel: ObservableObject {
     // Add rolling delay for casino effect
     DispatchQueue.main.asyncAfter(deadline: .now() + rollingDuration) {
       self.selectedResults[categoryId] = self.getRandomActivity(from: activities)
-      self.checkAndSaveToHistory()
       if let result = self.selectedResults[categoryId] {
         completion(result, category)
         print("🎯 \(category.name) result: \(result.name)")
@@ -138,22 +132,40 @@ class RandomActivityViewModel: ObservableObject {
     print("🔄 Reset all slots")
   }
 
-  /// Toggle history view
-  func toggleHistory() {
-    showHistory.toggle()
-    print("📚 History view: \(showHistory ? "shown" : "hidden")")
-  }
-
-  /// Clear all history
-  func clearHistory() {
-    activityHistory.removeAll()
-    print("🗑️ Activity history cleared")
-  }
-
   /// Refresh data from database
   func refreshData() async {
     print("🔄 Refreshing data from database...")
     await loadData()
+  }
+
+  /// Delete a category and all its activities
+  func deleteCategory(categoryId: UUID) async {
+    print("🗑️ Deleting category: \(categoryId)")
+
+    do {
+      let session = try await SupabaseManager.shared.client.auth.session
+      let userId = session.user.id
+
+      // Delete from database (this will cascade delete activities due to FK constraint)
+      try await SupabaseManager.shared.client
+        .from("categories")
+        .delete()
+        .eq("id", value: categoryId)
+        .eq("user_id", value: userId)
+        .execute()
+
+      // Remove from local arrays
+      categories.removeAll { $0.id == categoryId }
+      categorizedActivities.removeValue(forKey: categoryId)
+      rollingStates.removeValue(forKey: categoryId)
+      selectedResults.removeValue(forKey: categoryId)
+
+      print("✅ Category deleted successfully")
+
+    } catch {
+      self.errorMessage = "Failed to delete category: \(error.localizedDescription)"
+      print("❌ Error deleting category: \(error)")
+    }
   }
 
   // Private Helper Methods
@@ -161,45 +173,6 @@ class RandomActivityViewModel: ObservableObject {
   /// Get random activity from array
   private func getRandomActivity(from activities: [Activity]) -> Activity? {
     return activities.randomElement()
-  }
-
-  /// Check if all slots have results and save to history
-  private func checkAndSaveToHistory() {
-    // Only save to history if ALL categories have results
-    guard !categories.isEmpty else { return }
-
-    let allHaveResults = categories.allSatisfy { category in
-      selectedResults[category.id] != nil
-    }
-
-    if allHaveResults {
-      let completedActivity = DatabaseRandomActivity(
-        categoryResults: selectedResults,
-        categories: categories
-      )
-
-      addToHistory(completedActivity)
-    }
-  }
-
-  /// Add activity to history
-  private func addToHistory(_ activity: DatabaseRandomActivity) {
-    activityHistory.insert(activity, at: 0)
-
-    // Limit history count
-    if activityHistory.count > maxHistoryCount {
-      activityHistory.removeLast()
-    }
-
-    print("📝 Added to history. Total: \(activityHistory.count)")
-  }
-
-  /// Format date for display
-  func formatDate(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .short
-    return formatter.string(from: date)
   }
 
   /// Get activities for a specific category by ID
@@ -215,7 +188,6 @@ class RandomActivityViewModel: ObservableObject {
 
 // State Extensions
 extension RandomActivityViewModel {
-
   /// Check if any slot is currently rolling
   var isAnySlotRolling: Bool {
     rollingStates.values.contains(true)
@@ -234,16 +206,6 @@ extension RandomActivityViewModel {
     !selectedResults.isEmpty
   }
 
-  /// Check if has history
-  var hasHistory: Bool {
-    !activityHistory.isEmpty
-  }
-
-  /// Get formatted current time
-  var currentTimeString: String {
-    formatDate(Date())
-  }
-
   /// Check if data is loaded and ready
   var isDataReady: Bool {
     !categories.isEmpty && !isLoading
@@ -252,6 +214,17 @@ extension RandomActivityViewModel {
   /// Get result for specific category ID
   func getResult(for categoryId: UUID) -> Activity? {
     return selectedResults[categoryId]
+  }
+
+  /// Check if category has enough activities for randomization (minimum 2)
+  func hasEnoughActivities(for categoryId: UUID) -> Bool {
+    let activities = categorizedActivities[categoryId] ?? []
+    return activities.count >= 2
+  }
+
+  /// Get activities count for a specific category
+  func getActivitiesCount(for categoryId: UUID) -> Int {
+    return categorizedActivities[categoryId]?.count ?? 0
   }
 
   /// Check if specific category is rolling
@@ -267,33 +240,5 @@ extension RandomActivityViewModel {
   /// Get number of completed slots
   var completedSlotsCount: Int {
     return selectedResults.count
-  }
-}
-
-// Database Random Activity Model
-struct DatabaseRandomActivity {
-  let categoryResults: [UUID: Activity]  // categoryId: selected activity
-  let categories: [Category]  // for reference
-  let generatedAt: Date
-
-  init(categoryResults: [UUID: Activity], categories: [Category]) {
-    self.categoryResults = categoryResults
-    self.categories = categories
-    self.generatedAt = Date()
-  }
-
-  /// Get result for a specific category
-  func getResult(for categoryId: UUID) -> Activity? {
-    return categoryResults[categoryId]
-  }
-
-  /// Get formatted results as string pairs for display
-  var formattedResults: [(categoryName: String, activityName: String)] {
-    return categories.compactMap { category in
-      if let activity = categoryResults[category.id] {
-        return (category.name, activity.name)
-      }
-      return nil
-    }
   }
 }

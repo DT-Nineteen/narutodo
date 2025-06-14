@@ -7,8 +7,11 @@ class AuthService: ObservableObject {
 
   @Published var isAuthenticated: Bool = false
   @Published var currentSession: Session?
+  @Published var isLoading: Bool = true  // Add loading state for better UX
 
   init() {
+    // Check initial session first, then start listening
+    checkInitialSession()
     startListeningToAuthEvents()
   }
 
@@ -17,6 +20,32 @@ class AuthService: ObservableObject {
 
   // This is used to listen to the auth state changes
   private var authStateTask: Task<Void, Never>? = nil
+
+  // MARK: - Initial Session Check
+  private func checkInitialSession() {
+    Task {
+      do {
+        // Try to get current session from Supabase
+        let session = try await supabase.auth.session
+
+        // Update UI on main thread
+        await MainActor.run {
+          self.currentSession = session
+          self.isAuthenticated = true
+          self.isLoading = false
+          print("✅ Initial session found: \(session.user.email ?? "No email")")
+        }
+      } catch {
+        // No session found or error occurred
+        await MainActor.run {
+          self.currentSession = nil
+          self.isAuthenticated = false
+          self.isLoading = false
+          print("🛑 No initial session found: \(error.localizedDescription)")
+        }
+      }
+    }
+  }
 
   func startListeningToAuthEvents() {
     // Assign task to manage its lifecycle
@@ -31,12 +60,14 @@ class AuthService: ObservableObject {
           // When the user logs in or has an existing session
           self.currentSession = session
           self.isAuthenticated = true
+          self.isLoading = false
           print("✅ User is SIGNED IN: \(session?.user.email ?? "No email")")
 
         case .signedOut:
           // When the user logs out
           self.currentSession = nil
           self.isAuthenticated = false
+          self.isLoading = false
           print("🛑 User is SIGNED OUT")
 
         case .tokenRefreshed:
@@ -49,13 +80,13 @@ class AuthService: ObservableObject {
         case .userUpdated:
           // Update session if user information changes
           self.currentSession = session
-          print(" updateUser: \(session?.user.email ?? "No email")")
+          print("👤 User updated: \(session?.user.email ?? "No email")")
 
         case .passwordRecovery:
           // This is used to redirect the user to the password reset screen
           print("✨ Password recovery event received")
         default:
-          print("Unknown event: \(event)")
+          print("❓ Unknown auth event: \(event)")
         }
       }
     }
