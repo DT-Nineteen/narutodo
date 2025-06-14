@@ -26,13 +26,9 @@ struct RegisterView: View {
           Text("Register")
             .font(.system(size: 50, weight: .bold))
             .foregroundColor(.white)
-
-          Text("Start fill your todos")
-            .font(.system(size: 30, weight: .medium))
-            .foregroundColor(.white.opacity(0.9))
         }
-        .padding(.top, 60)
-        .padding(.bottom, 40)
+        .padding(.top, 40)
+        .padding(.bottom, 60)
 
         Spacer()
 
@@ -95,7 +91,7 @@ struct RegisterView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.green)
+                .background(Color.blue)
                 .cornerRadius(10)
             }
             .padding(.top, 10)

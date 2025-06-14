@@ -28,13 +28,13 @@ struct EditCategoryView: View {
       .navigationTitle("Edit Category")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .navigationBarLeading) {
+        ToolbarItemGroup(placement: .navigationBarLeading) {
           Button("Cancel") {
             onDismiss()
           }
         }
 
-        ToolbarItem(placement: .navigationBarTrailing) {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
           Button("Save") {
             Task {
               await viewModel.saveCategory()

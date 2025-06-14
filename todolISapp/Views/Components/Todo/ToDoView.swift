@@ -69,7 +69,6 @@ struct ToDoView: View {
   // Format due date for display
   private func formatDueDate(_ date: Date) -> String {
     let calendar = Calendar.current
-    let now = Date()
 
     if calendar.isDateInToday(date) {
       return "Due today"

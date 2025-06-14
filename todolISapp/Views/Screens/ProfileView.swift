@@ -268,14 +268,14 @@ struct EditProfileSheet: View {
       .navigationTitle("Edit Profile")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .navigationBarLeading) {
+        ToolbarItemGroup(placement: .navigationBarLeading) {
           Button("Cancel") {
             dismiss()
           }
           .foregroundColor(.white)
         }
 
-        ToolbarItem(placement: .navigationBarTrailing) {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
           Button("Save") {
             Task {
               await saveProfile()

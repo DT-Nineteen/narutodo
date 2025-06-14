@@ -24,13 +24,9 @@ struct LoginView: View {
         VStack(spacing: 0) {
           // Header Section
           VStack(spacing: 12) {
-            Text("To Do List")
+            Text("Login")
               .font(.system(size: 50, weight: .bold))
               .foregroundColor(.white)
-
-            Text("Get things done")
-              .font(.system(size: 30, weight: .medium))
-              .foregroundColor(.white.opacity(0.9))
           }
           .padding(.top, 80)
           .padding(.bottom, 60)

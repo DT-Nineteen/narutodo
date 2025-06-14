@@ -27,13 +27,13 @@ struct EditActivityView: View {
       .navigationTitle("Edit Activity")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .navigationBarLeading) {
+        ToolbarItemGroup(placement: .navigationBarLeading) {
           Button("Cancel") {
             onDismiss()
           }
         }
 
-        ToolbarItem(placement: .navigationBarTrailing) {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
           Button("Save") {
             Task {
               await saveActivity()
@@ -49,7 +49,7 @@ struct EditActivityView: View {
         selection: $selectedImage,
         matching: .images
       )
-      .onChange(of: selectedImage) { _, newItem in
+      .onChange(of: selectedImage) { newItem in
         Task {
           await viewModel.loadSelectedImage(newItem)
         }

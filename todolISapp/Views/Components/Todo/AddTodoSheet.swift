@@ -33,7 +33,7 @@ struct AddTodoSheet: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         // Cancel button
-        ToolbarItem(placement: .cancellationAction) {
+        ToolbarItemGroup(placement: .cancellationAction) {
           Button("Cancel") {
             print("[DEBUG] Add todo cancelled")
             isPresented = false
@@ -41,7 +41,7 @@ struct AddTodoSheet: View {
         }
 
         // Add button
-        ToolbarItem(placement: .confirmationAction) {
+        ToolbarItemGroup(placement: .confirmationAction) {
           Button("Add") {
             saveTodo()
           }

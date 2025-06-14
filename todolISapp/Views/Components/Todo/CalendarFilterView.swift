@@ -41,7 +41,7 @@ struct CalendarFilterView: View {
       }
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .navigationBarTrailing) {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
           Button("Close") {
             isPresented = false
           }
