@@ -1,11 +1,27 @@
 import SwiftUI
 
+// MARK: - Sheet Types
+enum SheetType: Identifiable {
+  case editCategory(Category)
+  case addActivity(Category)
+  case addCategory
+
+  var id: String {
+    switch self {
+    case .editCategory(let category):
+      return "edit_\(category.id)"
+    case .addActivity(let category):
+      return "activity_\(category.id)"
+    case .addCategory:
+      return "add_category"
+    }
+  }
+}
+
 struct RandomActivityView: View {
   @StateObject private var viewModel = RandomActivityViewModel()
-  @State private var editingCategory: Category?
-  @State private var showAddActivitySheet = false
-  @State private var selectedCategoryForActivity: Category?
-  @State private var showAddCategorySheet = false
+  @State private var activeSheet: SheetType?
+  @State private var newlyCreatedCategory: Category?  // Để track category vừa tạo
   @EnvironmentObject private var todoViewModel: TodoViewModel
 
   var body: some View {
@@ -81,76 +97,81 @@ struct RandomActivityView: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItemGroup(placement: .navigationBarTrailing) {
-          Menu {
-            // Add Category option
-            Button(action: {
-              showAddCategorySheet = true
-            }) {
-              HStack {
-                Image(systemName: "folder.badge.plus")
-                Text("Add Category")
-              }
-            }
-
-            if !viewModel.categories.isEmpty {
-              Divider()
-
-              // Add Activity options
-              ForEach(viewModel.categories, id: \.id) { category in
-                Button(action: {
-                  selectedCategoryForActivity = category
-                  showAddActivitySheet = true
-                }) {
-                  HStack {
-                    Text(category.iconName ?? "📝")
-                    Text("Add to \(category.name)")
-                  }
-                }
-              }
-            }
-          } label: {
+          Button(action: {
+            print("🔍 Add Category button tapped from toolbar")
+            activeSheet = .addCategory
+            print("📱 activeSheet set to: \(String(describing: activeSheet))")
+          }) {
             Image(systemName: "plus")
               .foregroundColor(.white)
           }
         }
       }
-      .sheet(item: $editingCategory) { category in
-        EditCategoryView(
-          category: category,
-          onDismiss: {
-            editingCategory = nil
-          },
-          onSave: {
-            Task {
-              await viewModel.refreshData()
+      .sheet(item: $activeSheet) { sheetType in
+        switch sheetType {
+        case .editCategory(let category):
+          EditCategoryView(
+            category: category,
+            onDismiss: {
+              activeSheet = nil
+            },
+            onSave: {
+              Task {
+                await viewModel.refreshData()
+              }
+              activeSheet = nil
             }
-            editingCategory = nil
-          }
-        )
-      }
-      .sheet(isPresented: $showAddActivitySheet) {
-        if let category = selectedCategoryForActivity {
+          )
+
+        case .addActivity(let category):
           AddActivityView(
             categoryId: category.id,
             onDismiss: {
-              showAddActivitySheet = false
-              selectedCategoryForActivity = nil
+              activeSheet = nil
             },
             onSave: { newActivity in
               print("✅ New activity added: \(newActivity.name)")
               Task {
                 await viewModel.refreshData()
               }
-              showAddActivitySheet = false
-              selectedCategoryForActivity = nil
+              activeSheet = nil
+            }
+          )
+
+        case .addCategory:
+          AddCategoryView(
+            onDismiss: {
+              print("🚪 AddCategoryView dismissed")
+              activeSheet = nil
+            },
+            onSave: { newCategory in
+              print("✅ New category created: \(newCategory.name)")
+
+              // Store category name để tìm sau khi refresh
+              let categoryName = newCategory.name
+
+              // Refresh data để load category mới
+              Task {
+                await viewModel.refreshData()
+
+                // Sau khi refresh xong, tìm category theo name và auto-edit
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                  if let foundCategory = viewModel.categories.first(where: {
+                    $0.name == categoryName
+                  }
+                  ) {
+                    print("🔄 Auto-opening edit for new category: \(foundCategory.name)")
+                    activeSheet = .editCategory(foundCategory)
+                  } else {
+                    print("⚠️ Could not find newly created category: \(categoryName)")
+                  }
+                }
+              }
+
+              activeSheet = nil
             }
           )
         }
-      }
-      .sheet(isPresented: $showAddCategorySheet) {
-        // TODO: Implement AddCategoryView
-        Text("Add Category View - Coming Soon")
-          .padding()
       }
     }
   }
@@ -191,49 +212,56 @@ extension RandomActivityView {
 
   // Dynamic layout for slot machines based on actual categories
   private var dynamicSlotMachinesSection: some View {
-    ScrollView {
-      LazyVStack(spacing: 12) {
-        ForEach(viewModel.categories, id: \.id) { category in
-          DynamicCompactSlotView(
-            category: category,
-            result: viewModel.getResult(for: category.id),
-            isRolling: viewModel.isRolling(categoryId: category.id),
-            availableActivities: viewModel.getActivities(for: category.id),
-            categoryColor: getCategoryColor(for: category, index: getCategoryIndex(category)),
-            onRoll: {
-              // Only allow rolling if category has enough activities
-              if viewModel.hasEnoughActivities(for: category.id) {
-                viewModel.rollCategory(categoryId: category.id) { activityResult, categoryResult in
-                  // When rolling is done, this action will be performed
-                  print("Adding to todo: \(categoryResult.name): \(activityResult.name)")
-                  Task {
-                    await todoViewModel.addTodoFromActivity(activity: activityResult)
-                  }
+    List {
+      ForEach(viewModel.categories, id: \.id) { category in
+        DynamicCompactSlotView(
+          category: category,
+          result: viewModel.getResult(for: category.id),
+          isRolling: viewModel.isRolling(categoryId: category.id),
+          availableActivities: viewModel.getActivities(for: category.id),
+          categoryColor: getCategoryColor(for: category, index: getCategoryIndex(category)),
+          onRoll: {
+            // Only allow rolling if category has enough activities
+            if viewModel.hasEnoughActivities(for: category.id) {
+              viewModel.rollCategory(categoryId: category.id) { activityResult, categoryResult in
+                // When rolling is done, this action will be performed
+                print("Adding to todo: \(categoryResult.name): \(activityResult.name)")
+                Task {
+                  await todoViewModel.addTodoFromActivity(activity: activityResult)
                 }
               }
-            },
-            onEdit: {
-              // Debug log để track vấn đề
-              print("🔍 Edit tapped for category: \(category.name)")
-              editingCategory = category
-              print("📱 EditingCategory set to: \(editingCategory?.name ?? "nil")")
-            },
-            onDelete: {
-              Task {
-                await viewModel.deleteCategory(categoryId: category.id)
-              }
             }
-          )
-        }
+          },
+          onEdit: {
+            // Debug log để track vấn đề
+            print("🔍 Edit tapped for category: \(category.name)")
+            activeSheet = .editCategory(category)
+            print("📱 activeSheet set to: \(String(describing: activeSheet))")
+          },
+          onDelete: {
+            Task {
+              await viewModel.deleteCategory(categoryId: category.id)
+            }
+          }
+        )
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
       }
-      .padding(.horizontal, 4)
+    }
+    .listStyle(.plain)
+    .scrollContentBackground(.hidden)
+    .listRowSpacing(0)
+    .refreshable {
+      Task {
+        await viewModel.refreshData()
+      }
     }
   }
 
-  // Helper function to get color for category
+  // Helper function to get color for category - now returns consistent color
   private func getCategoryColor(for category: Category, index: Int) -> Color {
-    let colors: [Color] = [.blue, .green, .orange, .purple, .red, .pink, .cyan, .indigo]
-    return colors[index % colors.count]
+    return .blue.opacity(0.8)
   }
 
   // Helper function to get category index for color
@@ -328,7 +356,7 @@ struct DynamicCompactSlotView: View {
   let result: Activity?
   let isRolling: Bool
   let availableActivities: [Activity]
-  let categoryColor: Color
+  let categoryColor: Color  // Keep parameter for compatibility but use consistent color
   let onRoll: () -> Void
   let onEdit: () -> Void
   let onDelete: () -> Void
@@ -336,6 +364,11 @@ struct DynamicCompactSlotView: View {
   @State private var currentSpinIndex = 0
   @State private var spinTimer: Timer?
   @State private var allEmojis: [String] = []
+
+  // Consistent color for all categories
+  private var consistentColor: Color {
+    return .white.opacity(0.8)
+  }
 
   // Get default emoji for category based on icon or name
   private var defaultEmoji: String {
@@ -362,146 +395,167 @@ struct DynamicCompactSlotView: View {
   }
 
   var body: some View {
-    VStack(spacing: 0) {
-      // Main slot machine button
-      Button(action: {
+    // Main container with separate clickable areas
+    HStack(spacing: 12) {
+      // Left: Image/Emoji display (compact slot or result) - Clickable for roll
+      Group {
+        if let result = result, !isRolling {
+          // Completed state - show result image or icon
+          ActivityImageView(
+            activity: result,
+            size: 50,
+            cornerRadius: 10,
+            defaultIcon: defaultEmoji,
+            backgroundColor: consistentColor.opacity(0.1)
+          )
+        } else {
+          // Empty/Rolling state - show slot display with same size as result
+          ZStack {
+            RoundedRectangle(cornerRadius: 10)
+              .fill(Color.black.opacity(0.8))
+              .frame(width: 50, height: 50)
+              .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                  .stroke(consistentColor.opacity(0.3), lineWidth: 1)
+              )
+
+            // Content
+            if isRolling {
+              // Spinning state
+              Text(allEmojis.isEmpty ? "🎲" : allEmojis[currentSpinIndex])
+                .font(.title2)
+                .foregroundColor(.white)
+                .blur(radius: 0.5)
+            } else if !hasActivities {
+              // No data state
+              Image(systemName: "plus")
+                .font(.title3)
+                .foregroundColor(.secondary)
+            } else {
+              // Empty state
+              Image(systemName: "hand.tap")
+                .font(.title3)
+                .foregroundColor(consistentColor.opacity(0.6))
+            }
+          }
+        }
+      }
+      .onTapGesture {
         if !isRolling && hasActivities && availableActivities.count >= 2 {
           onRoll()
         }
-      }) {
-        // Unified horizontal layout for all states
-        HStack(spacing: 12) {
-          // Left: Image/Emoji display (compact slot or result)
+      }
+
+      // Center: Text content - Clickable for roll
+      Group {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(category.name)
+            .font(.caption)
+            .fontWeight(.medium)
+            .foregroundColor(.secondary)
+
           if let result = result, !isRolling {
-            // Completed state - show result image or icon
-            ActivityImageView(
-              activity: result,
-              size: 50,
-              cornerRadius: 10,
-              defaultIcon: defaultEmoji,
-              backgroundColor: categoryColor.opacity(0.1)
-            )
-          } else {
-            // Empty/Rolling state - show slot display with same size as result
-            ZStack {
-              RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.8))
-                .frame(width: 50, height: 50)
-                .overlay(
-                  RoundedRectangle(cornerRadius: 10)
-                    .stroke(categoryColor.opacity(0.3), lineWidth: 1)
-                )
-
-              // Content
-              if isRolling {
-                // Spinning state
-                Text(allEmojis.isEmpty ? "🎲" : allEmojis[currentSpinIndex])
-                  .font(.title2)
-                  .foregroundColor(.white)
-                  .blur(radius: 0.5)
-              } else if !hasActivities {
-                // No data state
-                Image(systemName: "plus")
-                  .font(.title3)
-                  .foregroundColor(.secondary)
-              } else {
-                // Empty state
-                Image(systemName: "hand.tap")
-                  .font(.title3)
-                  .foregroundColor(categoryColor.opacity(0.6))
-              }
-            }
-          }
-
-          // Center: Text content
-          VStack(alignment: .leading, spacing: 2) {
-            Text(category.name)
-              .font(.caption)
+            Text(result.name)
+              .font(.subheadline)
+              .fontWeight(.medium)
+              .foregroundColor(.primary)
+              .multilineTextAlignment(.leading)
+          } else if isRolling {
+            Text("Randomizing...")
+              .font(.subheadline)
+              .fontWeight(.medium)
+              .foregroundColor(consistentColor)
+          } else if !hasActivities {
+            Text("No activities added")
+              .font(.subheadline)
               .fontWeight(.medium)
               .foregroundColor(.secondary)
-
-            if let result = result, !isRolling {
-              Text(result.name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.leading)
-            } else if isRolling {
-              Text("Randomizing...")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(categoryColor)
-            } else if !hasActivities {
-              Text("No activities added")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-            } else if availableActivities.count < 2 {
-              Text("Need 2+ activities (\(availableActivities.count)/2)")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.orange)
-            } else {
-              Text("Tap to randomize (\(availableActivities.count))")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-            }
-          }
-
-          Spacer()
-
-          // Right: Status indicator and Edit button
-          HStack(spacing: 8) {
-            // Edit button
-            Button(action: onEdit) {
-              Image(systemName: "pencil.circle.fill")
-                .font(.title3)
-                .foregroundColor(categoryColor)
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            // Status indicator
-            if !isRolling && result != nil {
-              Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
-                .font(.title3)
-            } else if isRolling {
-              ProgressView()
-                .scaleEffect(0.8)
-                .tint(categoryColor)
-            } else if !hasActivities {
-              Image(systemName: "exclamationmark.triangle")
-                .font(.title3)
-                .foregroundColor(.orange)
-            } else {
-              Image(systemName: "hand.tap")
-                .font(.title3)
-                .foregroundColor(categoryColor.opacity(0.6))
-            }
+          } else if availableActivities.count < 2 {
+            Text("Need 2+ activities (\(availableActivities.count)/2)")
+              .font(.subheadline)
+              .fontWeight(.medium)
+              .foregroundColor(.orange)
+          } else {
+            Text("Tap to randomize (\(availableActivities.count))")
+              .font(.subheadline)
+              .fontWeight(.medium)
+              .foregroundColor(.secondary)
           }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-          RoundedRectangle(cornerRadius: 8)
-            .fill(Color(.systemGray6))
-            .overlay(
-              RoundedRectangle(cornerRadius: 8)
-                .stroke(
-                  isRolling ? categoryColor : Color.clear,
-                  lineWidth: isRolling ? 2 : 0
-                )
-                .animation(.easeInOut(duration: 0.3), value: isRolling)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .onTapGesture {
+        if !isRolling && hasActivities && availableActivities.count >= 2 {
+          onRoll()
+        }
+      }
+
+      // Right: Status indicator
+      HStack(spacing: 8) {
+        // Status indicator
+        if !isRolling && result != nil {
+          Image(systemName: "checkmark.circle.fill")
+            .foregroundColor(.green)
+            .font(.title3)
+        } else if isRolling {
+          ProgressView()
+            .scaleEffect(0.8)
+            .tint(consistentColor)
+        } else if !hasActivities {
+          Image(systemName: "exclamationmark.triangle")
+            .font(.title3)
+            .foregroundColor(.orange)
+        } else if availableActivities.count < 2 {
+          Image(systemName: "exclamationmark.triangle")
+            .font(.title3)
+            .foregroundColor(.orange)
+        } else {
+          Image(systemName: "hand.tap")
+            .font(.title3)
+            .foregroundColor(consistentColor.opacity(0.6))
+        }
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .background(
+      RoundedRectangle(cornerRadius: 12)
+        .fill(Color(.systemGray6))
+        .overlay(
+          RoundedRectangle(cornerRadius: 12)
+            .stroke(
+              isRolling ? consistentColor : Color.clear,
+              lineWidth: isRolling ? 2 : 0
             )
+            .animation(.easeInOut(duration: 0.3), value: isRolling)
+        )
+    )
+    .contentShape(Rectangle())
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+      // Modern Edit button
+      Button {
+        onEdit()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "pencil")
+            .font(.system(size: 16, weight: .semibold))
+          Text("Edit")
+            .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+          LinearGradient(
+            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
         )
       }
-      .buttonStyle(PlainButtonStyle())
-      .disabled(!hasActivities || availableActivities.count < 2)
-    }
-    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-      // Delete button
+      .tint(.clear)
+
+      // Modern Delete button
       Button(role: .destructive) {
         onDelete()
       } label: {
@@ -512,8 +566,16 @@ struct DynamicCompactSlotView: View {
             .font(.system(size: 12, weight: .medium))
         }
         .foregroundColor(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+          LinearGradient(
+            gradient: Gradient(colors: [Color.red, Color.red.opacity(0.8)]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
       }
-      .tint(.red)
+      .tint(.clear)
     }
     .onAppear {
       setupEmojis()

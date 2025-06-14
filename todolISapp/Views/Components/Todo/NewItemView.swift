@@ -19,6 +19,8 @@ struct NewItemView: View {
         //Title
         TextField("Title", text: $viewModel.title)
           .textFieldStyle(DefaultTextFieldStyle())
+          .autocapitalization(.none)
+          .disableAutocorrection(true)
 
         //Due date
         DatePicker("Due Date", selection: $viewModel.dueDate)

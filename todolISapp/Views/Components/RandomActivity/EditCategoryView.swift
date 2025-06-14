@@ -15,23 +15,40 @@ struct EditCategoryView: View {
 
   var body: some View {
     NavigationView {
-      Form {
-        // MARK: - Category Section
-        categorySection
+      ZStack {
+        // Gradient background
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea(.all)
 
-        // MARK: - Activities Section
-        activitiesSection
+        ScrollView {
+          VStack(spacing: 20) {
+            // MARK: - Category Section
+            categorySection
 
-        // MARK: - Danger Zone
-        dangerZoneSection
+            // MARK: - Activities Section
+            activitiesSection
+
+            // MARK: - Danger Zone
+            dangerZoneSection
+          }
+          .padding(.horizontal, 20)
+          .padding(.vertical, 16)
+        }
       }
-      .navigationTitle("Edit Category")
+
       .navigationBarTitleDisplayMode(.inline)
+      .toolbarColorScheme(.dark, for: .navigationBar)
+      .toolbarBackground(.clear, for: .navigationBar)
       .toolbar {
         ToolbarItemGroup(placement: .navigationBarLeading) {
           Button("Cancel") {
             onDismiss()
           }
+          .foregroundColor(.white)
         }
 
         ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -41,9 +58,11 @@ struct EditCategoryView: View {
               onSave()
             }
           }
+          .foregroundColor(.white)
           .disabled(
             viewModel.isLoading
-              || viewModel.categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+              || viewModel.categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              || viewModel.activities.count < 2)
         }
       }
       .alert("Delete Category", isPresented: $showingDeleteCategoryAlert) {
@@ -120,123 +139,146 @@ struct EditCategoryView: View {
 extension EditCategoryView {
 
   private var categorySection: some View {
-    Section("Category Details") {
-      VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 16) {
+      // Section header
+      Text("Category Details")
+        .font(.headline)
+        .fontWeight(.semibold)
+        .foregroundColor(.white)
+
+      VStack(alignment: .leading, spacing: 12) {
         // Category name
-        TextField("Category Name", text: $viewModel.categoryName)
-          .textFieldStyle(RoundedBorderTextFieldStyle())
-
-        // Category icon picker
-        HStack {
-          Text("Icon:")
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-
-          Spacer()
-
-          HStack(spacing: 12) {
-            // Current icon display
-            Text(viewModel.categoryIcon.isEmpty ? "📂" : viewModel.categoryIcon)
-              .font(.title2)
-              .frame(width: 40, height: 40)
-              .background(Color.gray.opacity(0.1))
-              .cornerRadius(8)
-
-            // Icon picker buttons
-            ScrollView(.horizontal, showsIndicators: false) {
-              HStack(spacing: 8) {
-                ForEach(viewModel.availableIcons, id: \.self) { icon in
-                  Button(action: {
-                    viewModel.categoryIcon = icon
-                  }) {
-                    Text(icon)
-                      .font(.title3)
-                      .frame(width: 32, height: 32)
-                      .background(
-                        viewModel.categoryIcon == icon
-                          ? Color.accentColor.opacity(0.2)
-                          : Color.clear
-                      )
-                      .cornerRadius(6)
-                  }
-                }
-              }
-              .padding(.horizontal, 4)
-            }
-          }
-        }
-
-        // Activity count info
-        HStack {
-          Text("Activities:")
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-
-          Spacer()
-
-          Text("\(viewModel.activities.count)")
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Category Name")
             .font(.subheadline)
             .fontWeight(.medium)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(Color.accentColor.opacity(0.1))
-            .cornerRadius(4)
+            .foregroundColor(.white)
+
+          TextField("Category Name", text: $viewModel.categoryName)
+            .textFieldStyle(RoundedBorderTextFieldStyle())
+            .autocapitalization(.none)
+            .disableAutocorrection(true)
+        }
+
+        // Activity count info with validation
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Activities")
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundColor(.white)
+
+          HStack {
+            Text("Count:")
+              .font(.subheadline)
+              .foregroundColor(.white.opacity(0.8))
+
+            Spacer()
+
+            Text("\(viewModel.activities.count)")
+              .font(.subheadline)
+              .fontWeight(.medium)
+              .padding(.horizontal, 8)
+              .padding(.vertical, 2)
+              .background(
+                viewModel.activities.count >= 2
+                  ? Color.blue.opacity(0.8)
+                  : Color.orange.opacity(0.8)
+              )
+              .foregroundColor(.white)
+              .cornerRadius(4)
+          }
+
+          // Warning message if less than 2 activities
+          if viewModel.activities.count < 2 {
+            Text("⚠️ Need at least 2 activities to save category")
+              .font(.caption)
+              .foregroundColor(.orange)
+              .padding(.top, 2)
+          }
         }
       }
+      .padding(.vertical, 16)
+      .padding(.horizontal, 16)
+      .background(Color.white.opacity(0.1))
+      .cornerRadius(12)
     }
   }
 
   private var activitiesSection: some View {
-    Section {
-      // Add activity button
-      Button(action: {
-        showingAddActivity = true
-      }) {
-        HStack {
-          Image(systemName: "plus.circle.fill")
-            .foregroundColor(.green)
-          Text("Add New Activity")
-            .foregroundColor(.primary)
-          Spacer()
+    VStack(alignment: .leading, spacing: 16) {
+      // Section header
+      HStack {
+        Text("Activities (\(viewModel.activities.count))")
+          .font(.headline)
+          .fontWeight(.semibold)
+          .foregroundColor(.white)
+
+        if viewModel.activities.count < 2 {
+          Text("• Need 2+ to save")
+            .font(.caption)
+            .foregroundColor(.orange)
         }
       }
 
-      // Activities list
-      ForEach(viewModel.activities, id: \.id) { activity in
-        ActivityRowView(
-          activity: activity,
-          onEdit: {
-            editingActivityId = activity.id
-          },
-          onDelete: {
-            activityToDelete = activity
-            showingDeleteActivityAlert = true
+      VStack(spacing: 12) {
+        // Add activity button
+        Button(action: {
+          showingAddActivity = true
+        }) {
+          HStack {
+            Image(systemName: "plus.circle.fill")
+              .foregroundColor(.blue)
+            Text("Add New Activity")
+              .foregroundColor(.white)
+            Spacer()
           }
-        )
+          .padding(.vertical, 12)
+          .padding(.horizontal, 16)
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(8)
+        }
+
+        // Activities list
+        ForEach(viewModel.activities, id: \.id) { activity in
+          ActivityRowView(
+            activity: activity,
+            onEdit: {
+              editingActivityId = activity.id
+            },
+            onDelete: {
+              activityToDelete = activity
+              showingDeleteActivityAlert = true
+            }
+          )
+          .padding(.vertical, 8)
+          .padding(.horizontal, 16)
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(8)
+        }
       }
-    } header: {
-      Text("Activities (\(viewModel.activities.count))")
     }
   }
 
   private var dangerZoneSection: some View {
-    Section {
-      Button(action: {
-        showingDeleteCategoryAlert = true
-      }) {
-        HStack {
-          Image(systemName: "trash")
-          Text("Delete Category")
-          Spacer()
+    VStack(alignment: .leading, spacing: 16) {
+
+      VStack(spacing: 8) {
+        Button(action: {
+          showingDeleteCategoryAlert = true
+        }) {
+          HStack {
+            Image(systemName: "trash")
+            Text("Delete Category")
+            Spacer()
+          }
+          .foregroundColor(.red)
+          .padding(.vertical, 12)
+          .padding(.horizontal, 16)
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(8)
         }
-        .foregroundColor(.red)
+
       }
-    } header: {
-      Text("Danger Zone")
-    } footer: {
-      Text("Deleting this category will permanently remove it and all its activities.")
-        .font(.caption)
-        .foregroundColor(.secondary)
     }
   }
 }

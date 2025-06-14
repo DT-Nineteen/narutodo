@@ -138,6 +138,8 @@ extension EditProfileView {
 
         TextField("Enter your name", text: $editedName)
           .textFieldStyle(RoundedBorderTextFieldStyle())
+          .autocapitalization(.none)
+          .disableAutocorrection(true)
       }
     }
     .padding(.horizontal)

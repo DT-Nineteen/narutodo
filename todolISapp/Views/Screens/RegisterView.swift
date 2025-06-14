@@ -43,6 +43,8 @@ struct RegisterView: View {
               .padding(.vertical, 14)
               .background(Color.white.opacity(0.9))
               .cornerRadius(8)
+              .autocapitalization(.none)
+              .disableAutocorrection(true)
           }
 
           // Email Field
@@ -51,6 +53,7 @@ struct RegisterView: View {
               .font(.system(size: 16))
               .foregroundColor(.primary)
               .autocapitalization(.none)
+              .disableAutocorrection(true)
               .padding(.horizontal, 16)
               .padding(.vertical, 14)
               .background(Color.white.opacity(0.9))

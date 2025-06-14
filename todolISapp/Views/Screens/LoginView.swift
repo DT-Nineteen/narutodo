@@ -41,7 +41,7 @@ struct LoginView: View {
                 .font(.system(size: 16))
                 .foregroundColor(.primary)
                 .autocapitalization(.none)
-                .autocorrectionDisabled()
+                .disableAutocorrection(true)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .background(Color.white.opacity(0.9))

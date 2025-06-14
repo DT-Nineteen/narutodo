@@ -14,23 +14,40 @@ struct EditActivityView: View {
 
   var body: some View {
     NavigationView {
-      Form {
-        // Basic Information
-        basicInfoSection
+      ZStack {
+        // Gradient background
+        LinearGradient(
+          gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.green.opacity(0.1)]),
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea(.all)
 
-        // Icon/Image Section
-        iconImageSection
+        ScrollView {
+          VStack(spacing: 20) {
+            // Basic Information
+            basicInfoSection
 
-        // Additional Details
-        additionalDetailsSection
+            // Icon/Image Section
+            iconImageSection
+
+            // Additional Details
+            additionalDetailsSection
+          }
+          .padding(.horizontal, 20)
+          .padding(.vertical, 16)
+        }
       }
       .navigationTitle("Edit Activity")
       .navigationBarTitleDisplayMode(.inline)
+      .toolbarColorScheme(.dark, for: .navigationBar)
+      .toolbarBackground(.clear, for: .navigationBar)
       .toolbar {
         ToolbarItemGroup(placement: .navigationBarLeading) {
           Button("Cancel") {
             onDismiss()
           }
+          .foregroundColor(.white)
         }
 
         ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -39,6 +56,7 @@ struct EditActivityView: View {
               await saveActivity()
             }
           }
+          .foregroundColor(.white)
           .disabled(
             viewModel.isLoading
               || viewModel.activityName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -65,21 +83,45 @@ struct EditActivityView: View {
 extension EditActivityView {
 
   private var basicInfoSection: some View {
-    Section("Activity Information") {
-      // Activity name
-      TextField("Activity Name", text: $viewModel.activityName)
-        .textFieldStyle(RoundedBorderTextFieldStyle())
+    VStack(alignment: .leading, spacing: 16) {
+      // Section header
+      Text("Activity Information")
+        .font(.headline)
+        .fontWeight(.semibold)
+        .foregroundColor(.white)
+
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Activity Name")
+          .font(.subheadline)
+          .fontWeight(.medium)
+          .foregroundColor(.white)
+
+        TextField("Activity Name", text: $viewModel.activityName)
+          .textFieldStyle(RoundedBorderTextFieldStyle())
+          .autocapitalization(.none)
+          .disableAutocorrection(true)
+      }
+      .padding(.vertical, 16)
+      .padding(.horizontal, 16)
+      .background(Color.white.opacity(0.1))
+      .cornerRadius(12)
     }
   }
 
   private var iconImageSection: some View {
-    Section("Icon or Image") {
-      VStack(spacing: 12) {
+    VStack(alignment: .leading, spacing: 16) {
+      // Section header
+      Text("Icon or Image")
+        .font(.headline)
+        .fontWeight(.semibold)
+        .foregroundColor(.white)
+
+      VStack(spacing: 16) {
         // Current icon/image display
         HStack {
           Text("Preview:")
             .font(.subheadline)
-            .foregroundColor(.secondary)
+            .foregroundColor(.white.opacity(0.8))
 
           Spacer()
 
@@ -99,6 +141,7 @@ extension EditActivityView {
                   .aspectRatio(contentMode: .fill)
               } placeholder: {
                 ProgressView()
+                  .tint(.white)
               }
               .frame(width: 50, height: 50)
               .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -106,7 +149,7 @@ extension EditActivityView {
               Text(viewModel.activityIcon.isEmpty ? "📝" : viewModel.activityIcon)
                 .font(.title2)
                 .frame(width: 50, height: 50)
-                .background(Color.gray.opacity(0.1))
+                .background(Color.white.opacity(0.2))
                 .cornerRadius(8)
             }
           }
@@ -120,10 +163,10 @@ extension EditActivityView {
             Image(systemName: "photo")
             Text("Choose New Image from Photos")
           }
-          .foregroundColor(.blue)
+          .foregroundColor(.white)
           .frame(maxWidth: .infinity)
-          .padding(.vertical, 8)
-          .background(Color.blue.opacity(0.1))
+          .padding(.vertical, 12)
+          .background(Color.blue.opacity(0.3))
           .cornerRadius(8)
         }
 
@@ -144,7 +187,7 @@ extension EditActivityView {
         VStack(alignment: .leading, spacing: 8) {
           Text("Or choose an emoji:")
             .font(.subheadline)
-            .foregroundColor(.secondary)
+            .foregroundColor(.white.opacity(0.8))
 
           ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -159,8 +202,8 @@ extension EditActivityView {
                     .background(
                       viewModel.activityIcon == icon && viewModel.selectedUIImage == nil
                         && (viewModel.currentImageUrl?.isEmpty ?? true)
-                        ? Color.accentColor.opacity(0.2)
-                        : Color.clear
+                        ? Color.white.opacity(0.3)
+                        : Color.white.opacity(0.1)
                     )
                     .cornerRadius(6)
                 }
@@ -170,42 +213,67 @@ extension EditActivityView {
           }
         }
       }
+      .padding(.vertical, 16)
+      .padding(.horizontal, 16)
+      .background(Color.white.opacity(0.1))
+      .cornerRadius(12)
     }
   }
 
   private var additionalDetailsSection: some View {
-    Section("Additional Details") {
-      // Activity metadata
-      if let createdAt = viewModel.originalActivity?.createdAt {
-        HStack {
-          Text("Created:")
-            .font(.caption)
-            .foregroundColor(.secondary)
+    VStack(alignment: .leading, spacing: 16) {
+      // Section header
+      Text("Additional Details")
+        .font(.headline)
+        .fontWeight(.semibold)
+        .foregroundColor(.white)
 
-          Spacer()
+      VStack(spacing: 12) {
+        // Activity metadata
+        if let createdAt = viewModel.originalActivity?.createdAt {
+          HStack {
+            Text("Created:")
+              .font(.caption)
+              .foregroundColor(.white.opacity(0.8))
 
-          Text(formatDate(createdAt))
-            .font(.caption)
-            .foregroundColor(.secondary)
+            Spacer()
+
+            Text(formatDate(createdAt))
+              .font(.caption)
+              .foregroundColor(.white.opacity(0.8))
+          }
+          .padding(.vertical, 8)
+          .padding(.horizontal, 12)
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(8)
         }
-      }
 
-      // Loading indicator
-      if viewModel.isLoading {
-        HStack {
-          ProgressView()
-            .scaleEffect(0.8)
-          Text("Updating activity...")
-            .font(.caption)
-            .foregroundColor(.secondary)
+        // Loading indicator
+        if viewModel.isLoading {
+          HStack {
+            ProgressView()
+              .scaleEffect(0.8)
+              .tint(.white)
+            Text("Updating activity...")
+              .font(.caption)
+              .foregroundColor(.white.opacity(0.8))
+          }
+          .padding(.vertical, 12)
+          .padding(.horizontal, 16)
+          .background(Color.white.opacity(0.1))
+          .cornerRadius(8)
         }
-      }
 
-      // Error message
-      if let errorMessage = viewModel.errorMessage {
-        Text("Error: \(errorMessage)")
-          .font(.caption)
-          .foregroundColor(.red)
+        // Error message
+        if let errorMessage = viewModel.errorMessage {
+          Text("Error: \(errorMessage)")
+            .font(.caption)
+            .foregroundColor(.red)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(Color.red.opacity(0.1))
+            .cornerRadius(8)
+        }
       }
     }
   }

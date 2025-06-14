@@ -5,7 +5,6 @@ import SwiftUI
 class EditCategoryViewModel: ObservableObject {
   // MARK: - Published Properties
   @Published var categoryName: String = ""
-  @Published var categoryIcon: String = ""
   @Published var activities: [Activity] = []
   @Published var isLoading: Bool = false
   @Published var errorMessage: String?
@@ -14,25 +13,12 @@ class EditCategoryViewModel: ObservableObject {
   private var originalCategory: Category?
   private let activitiesService = ActivitiesViewModel()
 
-  // MARK: - Available Icons
-  let availableIcons = [
-    "📍", "🏠", "🏢", "🏪", "🏛️", "⛪", "🏰", "🗼", "🌉", "🌁",
-    "🎮", "🎯", "🎲", "🎪", "🎭", "🎨", "🎧", "🎸", "🎹", "🎤",
-    "🍜", "🍕", "🍔", "🍟", "🍗", "🍖", "🥘", "🍱", "🍙", "🍘",
-    "📚", "📖", "📝", "📊", "📈", "💻", "⌨️", "🖥️", "📱", "⌚",
-    "🏃", "🚴", "🏊", "🏋️", "🤸", "🧘", "🏓", "🏸", "⚽", "🏀",
-    "✈️", "🚗", "🚲", "🛵", "🚤", "⛵", "🚁", "🚀", "🎡", "🎢",
-    "💰", "💳", "💎", "🛍️", "🛒", "🎁", "💌", "📦", "📫", "📮",
-    "🌟", "⭐", "✨", "🌙", "☀️", "⚡", "🔥", "💧", "🌈", "🎉",
-  ]
-
   // MARK: - Initialization
   func loadCategory(_ category: Category) {
     print("📝 Loading category for edit: \(category.name)")
 
     self.originalCategory = category
     self.categoryName = category.name
-    self.categoryIcon = category.iconName ?? ""
 
     // Load activities for this category
     Task {
@@ -77,7 +63,7 @@ class EditCategoryViewModel: ObservableObject {
         id: originalCategory.id,
         userId: originalCategory.userId,
         name: categoryName.trimmingCharacters(in: .whitespacesAndNewlines),
-        iconName: categoryIcon.isEmpty ? nil : categoryIcon,
+        iconName: originalCategory.iconName,  // Keep original icon
         createdAt: originalCategory.createdAt
       )
 
@@ -161,8 +147,7 @@ class EditCategoryViewModel: ObservableObject {
     guard let original = originalCategory else { return false }
 
     let nameChanged = categoryName.trimmingCharacters(in: .whitespacesAndNewlines) != original.name
-    let iconChanged = categoryIcon != (original.iconName ?? "")
 
-    return nameChanged || iconChanged
+    return nameChanged
   }
 }

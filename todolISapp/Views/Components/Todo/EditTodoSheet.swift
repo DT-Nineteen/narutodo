@@ -33,6 +33,8 @@ struct EditTodoSheet: View {
           Section("Title") {
             TextField("Todo title", text: $todoTitle)
               .textFieldStyle(DefaultTextFieldStyle())
+              .autocapitalization(.none)
+              .disableAutocorrection(true)
           }
 
           // Due date section
