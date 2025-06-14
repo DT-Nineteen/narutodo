@@ -3,7 +3,9 @@ import SwiftUI
 struct RandomActivityView: View {
   @StateObject private var viewModel = RandomActivityViewModel()
   @State private var editingCategory: Category?
-  @State private var showEditSheet = false
+  @State private var showAddActivitySheet = false
+  @State private var selectedCategoryForActivity: Category?
+  @State private var showAddCategorySheet = false
   @EnvironmentObject private var todoViewModel: TodoViewModel
 
   var body: some View {
@@ -76,23 +78,79 @@ struct RandomActivityView: View {
         }
         .padding(.horizontal, 20)
       }
-      .sheet(isPresented: $showEditSheet) {
-        if let category = editingCategory {
-          EditCategoryView(
-            category: category,
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
+          Menu {
+            // Add Category option
+            Button(action: {
+              showAddCategorySheet = true
+            }) {
+              HStack {
+                Image(systemName: "folder.badge.plus")
+                Text("Add Category")
+              }
+            }
+
+            if !viewModel.categories.isEmpty {
+              Divider()
+
+              // Add Activity options
+              ForEach(viewModel.categories, id: \.id) { category in
+                Button(action: {
+                  selectedCategoryForActivity = category
+                  showAddActivitySheet = true
+                }) {
+                  HStack {
+                    Text(category.iconName ?? "📝")
+                    Text("Add to \(category.name)")
+                  }
+                }
+              }
+            }
+          } label: {
+            Image(systemName: "plus")
+              .foregroundColor(.white)
+          }
+        }
+      }
+      .sheet(item: $editingCategory) { category in
+        EditCategoryView(
+          category: category,
+          onDismiss: {
+            editingCategory = nil
+          },
+          onSave: {
+            Task {
+              await viewModel.refreshData()
+            }
+            editingCategory = nil
+          }
+        )
+      }
+      .sheet(isPresented: $showAddActivitySheet) {
+        if let category = selectedCategoryForActivity {
+          AddActivityView(
+            categoryId: category.id,
             onDismiss: {
-              showEditSheet = false
-              editingCategory = nil
+              showAddActivitySheet = false
+              selectedCategoryForActivity = nil
             },
-            onSave: {
+            onSave: { newActivity in
+              print("✅ New activity added: \(newActivity.name)")
               Task {
                 await viewModel.refreshData()
               }
-              showEditSheet = false
-              editingCategory = nil
+              showAddActivitySheet = false
+              selectedCategoryForActivity = nil
             }
           )
         }
+      }
+      .sheet(isPresented: $showAddCategorySheet) {
+        // TODO: Implement AddCategoryView
+        Text("Add Category View - Coming Soon")
+          .padding()
       }
     }
   }
@@ -155,8 +213,10 @@ extension RandomActivityView {
               }
             },
             onEdit: {
+              // Debug log để track vấn đề
+              print("🔍 Edit tapped for category: \(category.name)")
               editingCategory = category
-              showEditSheet = true
+              print("📱 EditingCategory set to: \(editingCategory?.name ?? "nil")")
             },
             onDelete: {
               Task {
