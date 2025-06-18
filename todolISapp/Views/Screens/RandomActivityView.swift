@@ -72,16 +72,16 @@ struct RandomActivityView: View {
 
             Spacer()
 
-            // Bottom buttons
-            VStack(spacing: 12) {
+            // // Bottom buttons
+            // VStack(spacing: 12) {
 
-              // Refresh Button
-              RefreshButton {
-                Task {
-                  await viewModel.refreshData()
-                }
-              }
-            }
+            //   // Refresh Button
+            //   RefreshButton {
+            //     Task {
+            //       await viewModel.refreshData()
+            //     }
+            //   }
+            // }
           }
 
           // Error message
@@ -192,22 +192,12 @@ extension RandomActivityView {
             .foregroundColor(Color.blue.opacity(0.2))
             .offset(x: 2, y: 2)
         )
-        .padding(.top, 8)
-        .padding(.bottom, 16)
-
-      if viewModel.isDataReady {
-        if viewModel.totalCategories > 0 {
-          Text("Tap to randomize (\(viewModel.totalCategories) categories)")
-            .font(.subheadline)
-            .foregroundColor(.white.opacity(0.8))
-        } else {
-          Text("No categories available")
-            .font(.subheadline)
-            .foregroundColor(.white.opacity(0.8))
-        }
-      }
+        .multilineTextAlignment(.center)
+        .padding(.top, 0)
+        .padding(.bottom, 4)
     }
-    .padding(.top, 8)
+    .frame(maxWidth: .infinity)
+    .padding(.top, 0)
   }
 
   // Dynamic layout for slot machines based on actual categories
@@ -227,7 +217,8 @@ extension RandomActivityView {
                 // When rolling is done, this action will be performed
                 print("Adding to todo: \(categoryResult.name): \(activityResult.name)")
                 Task {
-                  await todoViewModel.addTodoFromActivity(activity: activityResult)
+                  await todoViewModel.addTodoFromActivity(
+                    activity: activityResult, category: categoryResult)
                 }
               }
             }
@@ -344,7 +335,7 @@ private struct RefreshButton: View {
       )
       .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
-    .padding(.horizontal, 16)
+    .padding(.horizontal, 0)
     .padding(.vertical, 12)
     .buttonStyle(PlainButtonStyle())
   }
@@ -450,8 +441,8 @@ struct DynamicCompactSlotView: View {
       Group {
         VStack(alignment: .leading, spacing: 2) {
           Text(category.name)
-            .font(.caption)
-            .fontWeight(.medium)
+            .font(.headline)
+            .fontWeight(.bold)
             .foregroundColor(.secondary)
 
           if let result = result, !isRolling {

@@ -261,7 +261,7 @@ class TodoViewModel: ObservableObject {
     }
   }
 
-  func addTodoFromActivity(activity: Activity) async {
+  func addTodoFromActivity(activity: Activity, category: Category? = nil) async {
     print("[DEBUG] Adding todo from activity: \(activity.name)")
     let session = try? await SupabaseManager.shared.client.auth.session
     let currentUserId = session?.user.id
@@ -271,12 +271,25 @@ class TodoViewModel: ObservableObject {
       return
     }
 
+    // Set default due date to today for activity-generated todos
+    let defaultDueDate = Date()
+    print("[DEBUG] Setting default due date for activity todo: \(defaultDueDate)")
+
+    // Format title as "category: activity" if category is provided
+    let todoTitle =
+      if let category = category {
+        "\(category.name): \(activity.name)"
+      } else {
+        activity.name
+      }
+    print("[DEBUG] Todo title format: \(todoTitle)")
+
     let newTodo = NewTodo(
-      title: "\(activity.name)",
+      title: todoTitle,
       activity_id: activity.id,
       user_id: userId,
       is_completed: false,
-      due_date: nil  // Activity-generated todos don't have due dates by default
+      due_date: defaultDueDate  // Set due date to today by default
     )
 
     do {
