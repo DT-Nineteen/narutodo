@@ -39,9 +39,22 @@
 		DFCE77692DE6B48600936501 /* todolISappUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = todolISappUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DFB32EBB2E12BC98002D35F1 /* Exceptions for "todolISapp" folder in "todolISapp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DFCE774D2DE6B48300936501 /* todolISapp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DFCE77502DE6B48300936501 /* todolISapp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DFB32EBB2E12BC98002D35F1 /* Exceptions for "todolISapp" folder in "todolISapp" target */,
+			);
 			path = todolISapp;
 			sourceTree = "<group>";
 		};
@@ -423,7 +436,8 @@
 				DEVELOPMENT_TEAM = 7UPQY3S54U;
 				EMIT_FRONTEND_COMMAND_LINES = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = /Volumes/flash/www/todolISapp/todolISapp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NarutoDo;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -466,7 +480,8 @@
 				DEVELOPMENT_TEAM = 7UPQY3S54U;
 				EMIT_FRONTEND_COMMAND_LINES = NO;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = /Volumes/flash/www/todolISapp/todolISapp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NarutoDo;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
